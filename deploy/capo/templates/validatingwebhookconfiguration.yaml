@@ -1,0 +1,41 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: {{ template "capo.namespace" . }}/{{ include "capo.fullname" . }}-serving-cert
+  name: {{ include "capo.fullname" . }}-validating-webhook-configuration
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: {{ include "capo.fullname" . }}-webhook-service
+        namespace: {{ template "capo.namespace" . }}
+        path: /pod-ip-reservation
+    failurePolicy: Fail
+    name: pod.ip.io
+    namespaceSelector:
+      matchExpressions:
+        - key: ip-reserve
+          operator: In
+          values:
+            - enabled
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - DELETE
+        resources:
+          - pods
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods/eviction
+        scope: '*'
+    sideEffects: None

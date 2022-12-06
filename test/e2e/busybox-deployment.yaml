@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: busybox
+  name: busybox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busybox
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: busybox
+    spec:
+      containers:
+        - command:
+            - /bin/sh
+            - -c
+            - sleep 100000
+          image: busybox:1.26.2
+          imagePullPolicy: IfNotPresent
+          name: busybox

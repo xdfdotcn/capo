@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "capo.fullname" . }}-serving-cert
+  namespace: {{ template "capo.namespace" . }}
+spec:
+  dnsNames:
+    - {{ include "capo.fullname" . }}-webhook-service.ip-reserve.svc
+    - {{ include "capo.fullname" . }}-webhook-service.ip-reserve.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ include "capo.fullname" . }}-selfsigned-issuer
+  secretName: webhook-server-cert

@@ -1,0 +1,3 @@
+resources:
+- monitor.yaml
+- prometheus_ip_reserve_rules.yaml

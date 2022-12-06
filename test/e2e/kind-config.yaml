@@ -1,0 +1,35 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+# https://kind.sigs.k8s.io/docs/user/configuration/#networking
+networking:
+  # the default CNI will not be installed
+#  disableDefaultCNI: true
+  serviceSubnet: "11.0.0.0/16"
+  podSubnet: "11.244.0.0/16"
+  kubeProxyMode: "ipvs"
+#  apiServerAddress: "172.20.4.141"
+#  apiServerPort: 9099
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+      endpoint = ["http://hub-mirror.c.163.com"]
+nodes:
+- role: control-plane
+  # https://kind.sigs.k8s.io/docs/user/configuration/#kubeadm-config-patches
+  kubeadmConfigPatches:
+    - |
+      kind: ClusterConfiguration
+      imageRepository: registry.aliyuncs.com/google_containers
+    - |
+      kind: KubeletConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          pod-infra-container-image: registry.aliyuncs.com/google_containers/pause:3.1
+- role: worker
+  kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          pod-infra-container-image: registry.aliyuncs.com/google_containers/pause:3.1
+#- role: worker

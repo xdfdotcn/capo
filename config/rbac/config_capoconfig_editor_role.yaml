@@ -1,0 +1,24 @@
+# permissions for end users to edit capoconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: capoconfig-editor-role
+rules:
+- apiGroups:
+  - config.capo.io
+  resources:
+  - capoconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.capo.io
+  resources:
+  - capoconfigs/status
+  verbs:
+  - get

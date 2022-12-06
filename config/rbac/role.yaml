@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - projectcalico.org
+  resources:
+  - ipreservations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - projectcalico.org
+  resources:
+  - ipreservations/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - projectcalico.org
+  resources:
+  - ipreservations/status
+  verbs:
+  - get
+  - patch
+  - update

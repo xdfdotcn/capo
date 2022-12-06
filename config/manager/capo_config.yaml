@@ -1,0 +1,21 @@
+apiVersion: config.capo.io/v1
+kind: CapoConfig
+health:
+  healthProbeBindAddress: ":8081"
+metrics:
+  bindAddress: ":8080"
+webhook:
+  port: 9443
+leaderElection:
+  leaderElect: true
+  resourceName: ip-reserve
+  resourceNamespace: ip-reserve
+ipReserveMaxCount: 300
+ipReserveTime: 40m
+ipReleasePeriod: 5s
+labelSelector:
+  matchExpressions:
+    - key: statefulset.kubernetes.io/pod-name
+      operator: Exists
+    - key: brokerId
+      operator: Exists

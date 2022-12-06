@@ -1,0 +1,12 @@
+- op: add
+  path: /webhooks/0/rules/-
+  value:
+    apiGroups:
+    - ""
+    apiVersions:
+     - v1
+    operations:
+     - CREATE
+    resources:
+     - pods/eviction
+    scope: '*'

@@ -1,0 +1,6 @@
+apiVersion: config.capo.io/v1
+kind: CapoConfig
+metadata:
+  name: capoconfig-sample
+spec:
+  # TODO(user): Add fields here

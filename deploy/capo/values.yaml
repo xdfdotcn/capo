@@ -1,0 +1,106 @@
+# Default values for capo.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- Number of instances, high availability configuration Please set it to 3
+replicaCount: 3
+
+# -- Set capo config
+config:
+  # -- enable leaderElect
+  leaderElectionEnable: true
+  # -- health probe bind address
+  healthProbeBindAddress: ":8081"
+  # -- webhook port
+  webhookPort: 9443
+  # -- metrics bind address
+  metricsBindAddress: ":8080"
+  # -- ip reserve max count
+  ipReserveMaxCount: 300
+  # -- ip reserve max time
+  ipReserveTime: 40m
+  # -- ip release period
+  ipReleasePeriod: 5s
+
+# -- Namespace the chart deploys to
+namespace:
+
+image:
+  repository: xdfdotcn/ip-reserve-delay-release
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "v1.0.1"
+
+rbacImage:
+  repository: xdfdotcn/kube-rbac-proxy
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "v0.12.0"
+
+# -- Override the name of the chart
+nameOverride: ""
+
+# -- Override the expanded name of the chart
+fullnameOverride: ""
+
+# -- Set additional annotation
+podAnnotations: {}
+
+# -- Set POD level security context
+podSecurityContext:
+  runAsNonRoot: true
+  # fsGroup: 2000
+
+# -- Set container level security context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# -- Set the service
+service:
+  type: ClusterIP
+  # -- Default https port
+  port: 443
+
+# We usually recommend not to specify default resources and to leave this as a conscious
+# choice for the user. This also increases chances charts run on environments with little
+# resources, such as Minikube. If you do want to specify resources, uncomment the following
+# lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+resources:
+  limits:
+    cpu: 500m
+    memory: 1024Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# -- configure hpa
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 7
+  # -- cpu threshold
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# -- Which nodes the Set pod will be scheduled to
+nodeSelector: {}
+
+# -- Set tolerations node taint
+tolerations: []
+
+# -- Set affinity
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            control-plane: controller-manager
+        topologyKey: kubernetes.io/hostname

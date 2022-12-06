@@ -1,0 +1,492 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: ip-reserve
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ip-reserve-controller-manager
+  namespace: ip-reserve
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ip-reserve-leader-election-role
+  namespace: ip-reserve
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: ip-reserve-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - projectcalico.org
+  resources:
+  - ipreservations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - projectcalico.org
+  resources:
+  - ipreservations/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - projectcalico.org
+  resources:
+  - ipreservations/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ip-reserve-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ip-reserve-proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ip-reserve-leader-election-rolebinding
+  namespace: ip-reserve
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ip-reserve-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: ip-reserve-controller-manager
+  namespace: ip-reserve
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ip-reserve-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ip-reserve-manager-role
+subjects:
+- kind: ServiceAccount
+  name: ip-reserve-controller-manager
+  namespace: ip-reserve
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ip-reserve-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ip-reserve-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: ip-reserve-controller-manager
+  namespace: ip-reserve
+---
+apiVersion: v1
+data:
+  capo_config.yaml: |-
+    apiVersion: config.capo.io/v1
+    kind: CapoConfig
+    health:
+      healthProbeBindAddress: ":8081"
+    metrics:
+      bindAddress: ":8080"
+    webhook:
+      port: 9443
+    leaderElection:
+      leaderElect: true
+      resourceName: ip-reserve
+      resourceNamespace: ip-reserve
+    ipReserveMaxCount: 300
+    ipReserveTime: 40m
+    ipReleasePeriod: 5s
+    labelSelector:
+      matchExpressions:
+        - key: statefulset.kubernetes.io/pod-name
+          operator: Exists
+        - key: brokerId
+          operator: Exists
+kind: ConfigMap
+metadata:
+  name: ip-reserve-manager-config
+  namespace: ip-reserve
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: ip-reserve-controller-manager-metrics-service
+  namespace: ip-reserve
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ip-reserve-webhook-service
+  namespace: ip-reserve
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: ip-reserve-controller-manager
+  namespace: ip-reserve
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: controller-manager
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                control-plane: controller-manager
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - args:
+        - --config=/capo_config.yaml
+        command:
+        - /manager
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: TZ
+          value: Asia/Shanghai
+        image: xdfdotcn/ip-reserve-delay-release:v1.0.1
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+        - mountPath: /capo_config.yaml
+          name: manager-config
+          subPath: capo_config.yaml
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=0
+        image: xdfdotcn/kube-rbac-proxy:v0.12.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 5m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: ip-reserve-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert
+      - configMap:
+          name: ip-reserve-manager-config
+        name: manager-config
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ip-reserve-serving-cert
+  namespace: ip-reserve
+spec:
+  dnsNames:
+  - ip-reserve-webhook-service.ip-reserve.svc
+  - ip-reserve-webhook-service.ip-reserve.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: ip-reserve-selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: ip-reserve-selfsigned-issuer
+  namespace: ip-reserve
+spec:
+  selfSigned: {}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    prometheus: k8s
+    role: alert-rules
+  name: ip-reserve-prometheus-ip-reserve-rules
+  namespace: ip-reserve
+spec:
+  groups:
+  - name: ip reserve alert
+    rules:
+    - alert: capo ip reserve controller maybe down
+      annotations:
+        message: capo ip reserve controller 实例数量小于 3
+      expr: ( count(up{job="ip-reserve-controller-manager-metrics-service"}) or vector(0) ) < 3
+      for: 3m
+      labels:
+        group: xadd-k8s
+        severity: warning
+    - alert: capo ip reserved count high
+      annotations:
+        message: 预留 IP 数达到阈值 {{ with query "0.8 * max(ip_reserve_count_max)" }} {{ . | first | value | humanize }} {{ end }} , 最大值 {{ with query "max(ip_reserve_count_max)" }} {{ . | first | value | humanize }} {{ end }}, 当前值为：{{$value}}
+      expr: max(ip_reserve_count) by (instance) > 0.8 * max(ip_reserve_count_max) by (instance)
+      for: 1m
+      labels:
+        group: xadd-k8s
+        severity: warning
+    - alert: capo ip reserve no leader
+      annotations:
+        message: capo ip reserve controller 当前没有 leader
+      expr: ( count(leader_election_master_status{job="ip-reserve-controller-manager-metrics-service"} == 1) or vector(0) ) != 1
+      for: 10s
+      labels:
+        group: xadd-k8s
+        severity: warning
+    - alert: capo ip reserve leaderelection
+      annotations:
+        message: capo ip reserve controller 发生 leader 切换，当前 leader 实例为：{{ $labels.instance }}
+      expr: changes(leader_election_master_status{job="ip-reserve-controller-manager-metrics-service"}[5m])  > 0
+      labels:
+        group: xadd-k8s
+        severity: warning
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: ip-reserve-controller-manager-metrics-monitor
+  namespace: ip-reserve
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    path: /metrics
+    port: https
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: ip-reserve/ip-reserve-serving-cert
+  name: ip-reserve-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: ip-reserve-webhook-service
+      namespace: ip-reserve
+      path: /pod-ip-reservation
+  failurePolicy: Fail
+  name: pod.ip.io
+  namespaceSelector:
+    matchExpressions:
+    - key: ip-reserve
+      operator: In
+      values:
+      - enabled
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - DELETE
+    resources:
+    - pods
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods/eviction
+    scope: '*'
+  sideEffects: None

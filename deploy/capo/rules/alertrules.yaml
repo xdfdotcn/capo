@@ -1,0 +1,31 @@
+- alert: capo ip reserve controller maybe down
+  annotations:
+    message: capo ip reserve controller 实例数量小于 3
+  expr: ( count(up{job="capo-metrics-service"}) or vector(0) ) < 3
+  for: 3m
+  labels:
+    group: xadd-k8s
+    severity: warning
+- alert: capo ip reserved count high
+  annotations:
+    message: 预留 IP 数达到阈值 {{ with query "0.8 * max(ip_reserve_count_max)" }} {{ . | first | value | humanize }} {{ end }} , 最大值 {{ with query "max(ip_reserve_count_max)" }} {{ . | first | value | humanize }} {{ end }}, 当前值为：{{$value}}
+  expr: max(ip_reserve_count) by (instance) > 0.8 * max(ip_reserve_count_max) by (instance)
+  for: 1m
+  labels:
+    group: xadd-k8s
+    severity: warning
+- alert: capo ip reserve no leader
+  annotations:
+    message: capo ip reserve controller 当前没有 leader
+  expr: ( count(leader_election_master_status{job="capo-metrics-service"} == 1) or vector(0) ) != 1
+  for: 10s
+  labels:
+    group: xadd-k8s
+    severity: warning
+- alert: capo ip reserve leaderelection
+  annotations:
+    message: capo ip reserve controller 发生 leader 切换，当前 leader 实例为：{{ $labels.instance }}
+  expr: changes(leader_election_master_status{job="capo-metrics-service"}[5m])  > 0
+  labels:
+    group: xadd-k8s
+    severity: warning

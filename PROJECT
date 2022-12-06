@@ -1,0 +1,30 @@
+domain: capo.io
+componentConfig: true
+layout:
+- go.kubebuilder.io/v3
+multigroup: true
+projectName: capo
+repo: github.com/xdfdotcn/capo
+resources:
+- controller: true
+  group: core
+  kind: Pod
+  path: k8s.io/api/core/v1
+  version: v1
+  webhooks:
+    validation: true
+    webhookVersion: v1
+- controller: true
+  domain: capo.io
+  group: projectcalico.org
+  kind: IPReservation
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: capo.io
+  group: config
+  kind: CapoConfig
+  path: github.com/xdfdotcn/capo/apis/config/v1
+  version: v1
+version: "3"

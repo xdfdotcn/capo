@@ -1,0 +1,28 @@
+apiVersion: v1
+data:
+  capo_config.yaml: |-
+    apiVersion: config.capo.io/v1
+    kind: CapoConfig
+    health:
+      healthProbeBindAddress: {{ default ":8081" .Values.config.healthProbeBindAddress }}
+    metrics:
+      bindAddress: {{ default ":8080" .Values.config.metricsBindAddress }}
+    webhook:
+      port: {{ default 9443 .Values.config.webhookPort }}
+    leaderElection:
+      leaderElect: {{ default true .Values.config.leaderElectionEnable }}
+      resourceName: {{ include "capo.fullname" . }}
+      resourceNamespace: {{ template "capo.namespace" . }}
+    ipReserveMaxCount: {{ default 300 .Values.config.ipReserveMaxCount }}
+    ipReserveTime: {{ default "40m" .Values.config.ipReserveTime }}
+    ipReleasePeriod: {{ default "5s" .Values.config.ipReleasePeriod }}
+    labelSelector:
+      matchExpressions:
+        - key: statefulset.kubernetes.io/pod-name
+          operator: Exists
+        - key: brokerId
+          operator: Exists
+kind: ConfigMap
+metadata:
+  name: {{ include "capo.fullname" . }}-manager-config
+  namespace: {{ template "capo.namespace" . }}
