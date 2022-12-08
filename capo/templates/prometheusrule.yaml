@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    prometheus: k8s
+    role: alert-rules
+  name: {{ include "capo.fullname" . }}-prometheusrules
+  namespace: {{ template "capo.namespace" . }}
+spec:
+  groups:
+    {{- range $path, $_ := .Files.Glob "rules/*" }}
+      - name: ip reserve alert
+        rules:
+        {{- $.Files.Get $path | nindent 8 }}
+    {{- end }}

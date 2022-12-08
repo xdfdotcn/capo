@@ -1,0 +1,19 @@
+1. Get the application URL by running these commands:
+kubectl get pods -n {{ template "capo.namespace" . }} -o wide | grep {{ include "capo.fullname" . }}
+
+2. Chart version: {{ .Chart.Version }}
+Capo version: {{ default .Chart.AppVersion (default .Values.image.tag .Values.image.tag) }}
+
+Thank you for installing {{ .Chart.Name }}! Your release is named {{ .Release.Name }}.
+
+{{- if not .Values.replicaCount }}
+⚠️  WARNING: Setting replicas count below 3 means Capo is not running in high availability mode.
+{{- else if lt (int .Values.replicaCount) 3 }}
+⚠️  WARNING: Setting replicas count below 3 means Capo is not running in high availability mode.
+{{- end }}
+
+💡 Note: There is a trade-off when deciding which approach to take regarding Namespace exclusions. Please see the documentation at https://capo.io/installation/#security-vs-operability to understand the risks.
+
+{{- if semverCompare "<1.18.0" .Capabilities.KubeVersion.Version }}
+⚠️  WARNING: The minimal Kubernetes version officially supported by Capo is 1.18. Earlier versions are untested and Capo is not guaranteed to work with Kubernetes {{ .Capabilities.KubeVersion.Version }}.
+{{- end }}

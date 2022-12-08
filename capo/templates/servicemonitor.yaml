@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    {{- include "capo.labels" . | nindent 4 }}
+  name: {{ include "capo.fullname" . }}-metrics-monitor
+  namespace: {{ template "capo.namespace" . }}
+spec:
+  endpoints:
+    - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      path: /metrics
+      port: https
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+  selector:
+    matchLabels:
+      {{- include "capo.selectorLabels" . | nindent 6 }}
