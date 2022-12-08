@@ -60,7 +60,7 @@ Kubernetes: `>=1.18.0-0`
 
 在客户端，存储库使用以下`$ helm repo`命令添加仓库：
 ```shell
-# helm repo add  xdfgithubrepo  https://xdfdotcn.github.io/capo-helm-chart 
+# helm repo add  xdfgithubrepo  https://xdfdotcn.github.io/capo 
 "xdfgithubrepo" has been added to your repositories
 ```
 搜索 Helm chart 存储库
